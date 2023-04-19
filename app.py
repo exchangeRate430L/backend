@@ -1,4 +1,5 @@
 import datetime
+import itertools
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from .db_config import DB_CONFIG
@@ -94,11 +95,48 @@ def exchange():
     from .model.transaction import Transaction
     transactions_usd = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == True).all()
     transactions_lbp = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == False).all()
-    
+    transactions = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE)).all()
     usd_sell = []
     usd_buy = []
     num_sell = 0
     num_buy = 0
+
+
+
+
+
+
+
+
+    #added data for chart
+    data = []
+    for transaction in transactions:
+        data.append({'time': transaction.added_date.timestamp() * 1000,
+                     'sell': transaction.usd_amount})
+
+    for transaction in transactions:
+        data.append({'time': transaction.added_date.timestamp() * 1000,
+                     'buy': transaction.lbp_amount})
+
+    # sort the data by date
+    data = sorted(data, key=lambda x: x['time'])
+
+    # combine data points with the same date
+    combined_data = []
+    for key, group in itertools.groupby(data, lambda x: x['time']):
+        combined_data.append({
+            'time': key,
+            'buy': sum(x.get('buy', 0) for x in group),
+            'sell': sum(x.get('sell', 0) for x in group)
+        })
+    #end of added data
+
+
+
+
+
+
+
 
     for e in transactions_usd:
         usd_sell.append(e)
@@ -118,38 +156,38 @@ def exchange():
 
 
     if sell_trans != 0:
-        sum = 0
+        sums = 0
         for i in range(sell_trans):
-            sum += (usd_sell[i].lbp_amount / usd_sell[i].usd_amount)
-            avg_usd_lbp = sum / sell_trans
+            sums += (usd_sell[i].lbp_amount / usd_sell[i].usd_amount)
+            avg_usd_lbp = sums / sell_trans
     else:
         avg_usd_lbp = 0
 
     if change_buy_trans != 0:
-        sum = 0
+        sums = 0
         for j in range(change_buy_trans):
-            sum += (change_buy_list[j].lbp_amount / change_buy_list[j].usd_amount)
-            avg_change_lbp_usd = sum / change_buy_trans
+            sums += (change_buy_list[j].lbp_amount / change_buy_list[j].usd_amount)
+            avg_change_lbp_usd = sums / change_buy_trans
     else:
         avg_change_lbp_usd = 0
 
 
     if change_sell_trans != 0:
-        sum = 0
+        sums = 0
         for i in range(change_sell_trans):
-            sum += (change_sell_list[i].lbp_amount / change_sell_list[i].usd_amount)
-            avg_change_usd_lbp = sum / change_sell_trans
+            sums += (change_sell_list[i].lbp_amount / change_sell_list[i].usd_amount)
+            avg_change_usd_lbp = sums / change_sell_trans
     else:
         avg_change_usd_lbp = 0
 
     if buy_trans != 0:
-        sum = 0
+        sums= 0
         for j in range(buy_trans):
-            sum += (usd_buy[j].lbp_amount / usd_buy[j].usd_amount)
-            avg_lbp_usd = sum / buy_trans
+            sums += (usd_buy[j].lbp_amount / usd_buy[j].usd_amount)
+            avg_lbp_usd = sums / buy_trans
     else:
         avg_lbp_usd = 0
-    return jsonify(usd_to_lbp=avg_usd_lbp, lbp_to_usd=avg_lbp_usd, num_buy=num_buy, num_sell=num_sell, avg_change_lbp_usd=avg_change_lbp_usd, avg_change_usd_lbp=avg_change_usd_lbp)
+    return jsonify(combined_data=combined_data,usd_to_lbp=avg_usd_lbp, lbp_to_usd=avg_lbp_usd, num_buy=num_buy, num_sell=num_sell, avg_change_lbp_usd=avg_change_lbp_usd, avg_change_usd_lbp=avg_change_usd_lbp)
 
 @app.route('/user', methods=['POST'])
 def users():
