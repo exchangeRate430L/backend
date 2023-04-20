@@ -73,6 +73,55 @@ def transaction():
                             lbp_amount=request.json["lbp_amount"],
                             usd_to_lbp=request.json["usd_to_lbp"],
                             user_id=decode_token(extract_auth_token(request)))
+    
+
+    START_DATE=datetime.datetime.now() - datetime.timedelta(days=3)
+    END_DATE=datetime.datetime.now()
+    from .model.transaction import Transaction
+    transactions_usd = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == True).all()
+    transactions_lbp = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == False).all()
+
+    usd_sell = []
+    usd_buy = []
+    num_sell = 0
+    num_buy = 0
+
+
+    for e in transactions_usd:
+        usd_sell.append(e)
+        num_sell += 1
+    for e in transactions_lbp:
+        usd_buy.append(e)
+        num_buy += 1
+
+    sell_trans = len(usd_sell)
+    buy_trans = len(usd_buy)
+
+    if sell_trans != 0:
+        sums = 0
+        for i in range(sell_trans):
+            sums += (usd_sell[i].lbp_amount / usd_sell[i].usd_amount)
+            avg_usd_lbp = sums / sell_trans
+    else:
+        avg_usd_lbp = 0
+
+    if buy_trans != 0:
+        sums= 0
+        for j in range(buy_trans):
+            sums += (usd_buy[j].lbp_amount / usd_buy[j].usd_amount)
+            avg_lbp_usd = sums / buy_trans
+    else:
+        avg_lbp_usd = 0
+
+    
+    from .model.storage import Storage
+    store = Storage(avg_usd_lbp=avg_usd_lbp, avg_lbp_usd=avg_lbp_usd)
+    db.session.add(store)
+    db.session.commit()
+    from .model.storage import storage_schema
+    jsonify(storage_schema.dump(store))
+
+
     db.session.add(entry)
     db.session.commit()
     from .model.transaction import transaction_schema
@@ -93,9 +142,10 @@ def exchange():
     START_DATE=datetime.datetime.now() - datetime.timedelta(days=3)
     END_DATE=datetime.datetime.now()
     from .model.transaction import Transaction
+    from .model.storage import Storage
     transactions_usd = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == True).all()
     transactions_lbp = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == False).all()
-    transactions = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE)).all()
+    average = Storage.query.filter(Transaction.added_date.between(START_DATE, END_DATE)).all()
     usd_sell = []
     usd_buy = []
     num_sell = 0
@@ -109,33 +159,11 @@ def exchange():
 
 
     #added data for chart
-    data = []
-    for transaction in transactions:
-        data.append({'time': transaction.added_date.timestamp() * 1000,
-                     'sell': transaction.usd_amount})
-
-    for transaction in transactions:
-        data.append({'time': transaction.added_date.timestamp() * 1000,
-                     'buy': transaction.lbp_amount})
-
-    # sort the data by date
-    data = sorted(data, key=lambda x: x['time'])
-
-    # combine data points with the same date
     combined_data = []
-    for key, group in itertools.groupby(data, lambda x: x['time']):
-        combined_data.append({
-            'time': key,
-            'buy': sum(x.get('buy', 0) for x in group),
-            'sell': sum(x.get('sell', 0) for x in group)
-        })
-    #end of added data
-
-
-
-
-
-
+    for transaction in average:
+        combined_data.append({'time': transaction.added_date.timestamp() * 1000,
+                     'sell': transaction.avg_usd_lbp,
+                     'buy': transaction.avg_lbp_usd})
 
 
     for e in transactions_usd:
@@ -187,7 +215,19 @@ def exchange():
             avg_lbp_usd = sums / buy_trans
     else:
         avg_lbp_usd = 0
-    return jsonify(combined_data=combined_data,usd_to_lbp=avg_usd_lbp, lbp_to_usd=avg_lbp_usd, num_buy=num_buy, num_sell=num_sell, avg_change_lbp_usd=avg_change_lbp_usd, avg_change_usd_lbp=avg_change_usd_lbp)
+
+    
+    
+    return jsonify(
+    combined_data=combined_data, 
+    usd_to_lbp=avg_usd_lbp, 
+    lbp_to_usd=avg_lbp_usd, 
+    num_buy=num_buy, 
+    num_sell=num_sell, 
+    avg_change_lbp_usd=avg_change_lbp_usd, 
+    avg_change_usd_lbp=avg_change_usd_lbp
+)
+
 
 @app.route('/user', methods=['POST'])
 def users():
