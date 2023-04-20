@@ -145,25 +145,31 @@ def exchange():
     from .model.storage import Storage
     transactions_usd = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == True).all()
     transactions_lbp = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == False).all()
-    average = Storage.query.filter(Transaction.added_date.between(START_DATE, END_DATE)).all()
+    average = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).all()
+    last_row = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).order_by(Storage.id.desc()).first()
+    second_last_row = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).order_by(Storage.id.desc()).offset(2).first()
+
+    change_usd_lbp = last_row.avg_usd_lbp - second_last_row.avg_usd_lbp
+    change_lbp_usd = last_row.avg_lbp_usd - second_last_row.avg_lbp_usd
+
     usd_sell = []
     usd_buy = []
     num_sell = 0
     num_buy = 0
 
-
-
-
-
-
-
-
     #added data for chart
-    combined_data = []
+    combined_data_hour = []
     for transaction in average:
-        combined_data.append({'time': transaction.added_date.timestamp() * 1000,
+        combined_data_hour.append({'time': transaction.added_date.timestamp() * 1000,
                      'sell': transaction.avg_usd_lbp,
                      'buy': transaction.avg_lbp_usd})
+        
+    combined_data_day = []
+    for transaction in average:
+        combined_data_day.append({
+            'date': transaction.added_date.strftime('%Y-%m-%d %H:%M:%S'),
+            'sell': transaction.avg_usd_lbp,
+            'buy': transaction.avg_lbp_usd})
 
 
     for e in transactions_usd:
@@ -176,13 +182,6 @@ def exchange():
     sell_trans = len(usd_sell)
     buy_trans = len(usd_buy)
 
-    change_sell_list = usd_sell[:-1]
-    change_buy_list = usd_buy[:-1]
-
-    change_sell_trans = len(change_sell_list)
-    change_buy_trans = len(change_buy_list)
-
-
     if sell_trans != 0:
         sums = 0
         for i in range(sell_trans):
@@ -191,22 +190,6 @@ def exchange():
     else:
         avg_usd_lbp = 0
 
-    if change_buy_trans != 0:
-        sums = 0
-        for j in range(change_buy_trans):
-            sums += (change_buy_list[j].lbp_amount / change_buy_list[j].usd_amount)
-            avg_change_lbp_usd = sums / change_buy_trans
-    else:
-        avg_change_lbp_usd = 0
-
-
-    if change_sell_trans != 0:
-        sums = 0
-        for i in range(change_sell_trans):
-            sums += (change_sell_list[i].lbp_amount / change_sell_list[i].usd_amount)
-            avg_change_usd_lbp = sums / change_sell_trans
-    else:
-        avg_change_usd_lbp = 0
 
     if buy_trans != 0:
         sums= 0
@@ -215,17 +198,16 @@ def exchange():
             avg_lbp_usd = sums / buy_trans
     else:
         avg_lbp_usd = 0
-
-    
     
     return jsonify(
-    combined_data=combined_data, 
+    combined_data_hour=combined_data_hour, 
+    combined_data_day=combined_data_day,
     usd_to_lbp=avg_usd_lbp, 
     lbp_to_usd=avg_lbp_usd, 
     num_buy=num_buy, 
     num_sell=num_sell, 
-    avg_change_lbp_usd=avg_change_lbp_usd, 
-    avg_change_usd_lbp=avg_change_usd_lbp
+    change_usd_lbp=change_usd_lbp,
+    change_lbp_usd=change_lbp_usd
 )
 
 
