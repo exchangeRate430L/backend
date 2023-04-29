@@ -148,7 +148,6 @@ def exchange():
     average = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).all()
     last_row = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).order_by(Storage.id.desc()).first()
     second_last_row = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).order_by(Storage.id.desc()).offset(2).first()
-
     change_usd_lbp = last_row.avg_usd_lbp - second_last_row.avg_usd_lbp
     change_lbp_usd = last_row.avg_lbp_usd - second_last_row.avg_lbp_usd
 
@@ -214,10 +213,28 @@ def exchange():
 @app.route('/user', methods=['POST'])
 def users():
     from .model.user import User, user_schema
-    entry = User(user_name=request.json["user_name"], password=request.json["password"])
+    entry = User(user_name=request.json["user_name"], password=request.json["password"], role=request.json["role"], usd_balance=request.json['usd_balance'], lbp_balance=request.json['lbp_balance'])
     db.session.add(entry)
     db.session.commit()
     return jsonify(user_schema.dump(entry))
+
+# @app.route('/user/<int:user_id>', methods=['PUT'])
+# def update_user_balance(user_id):
+#     from .model.user import User, user_schema
+    
+#     # Get the user object from the database
+#     user = User.query.filter(user_id)
+    
+#     # Update the USD balance and LBP balance
+#     user.usd_balance = request.json.get('usd_balance', user.usd_balance)
+#     user.lbp_balance = request.json.get('lbp_balance', user.lbp_balance)
+    
+#     # Commit the changes to the database
+#     db.session.commit()
+    
+#     # Return the updated user object as JSON
+#     return jsonify(user_schema.dump(user))
+
 
 @app.route('/authentication', methods=['POST'])
 def authentication():
@@ -234,7 +251,11 @@ def authentication():
                return abort(403)
             else:
                 token = create_token(user.id)
-                return(jsonify({"token" : token}))
+                role = user.role
+                usd_balance = user.usd_balance
+                lbp_balance = user.lbp_balance
+                user_id = user.id
+                return(jsonify({"token" : token, "role" : role, "usd_balance": usd_balance, "lbp_balance": lbp_balance, "user_id": user_id}))
 
 # for the backend
 
