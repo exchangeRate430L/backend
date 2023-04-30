@@ -66,13 +66,28 @@ def transaction():
                             lbp_amount=request.json["lbp_amount"],
                             usd_to_lbp=request.json["usd_to_lbp"],
                             user_id=None)
+        
     else:
         from .model.transaction import Transaction
-        from .model.user import User
         entry = Transaction(usd_amount=request.json["usd_amount"],
                             lbp_amount=request.json["lbp_amount"],
                             usd_to_lbp=request.json["usd_to_lbp"],
                             user_id=decode_token(extract_auth_token(request)))
+        from .model.user import User
+        if entry.user_id:
+            user = User.query.get(entry.user_id)
+
+        if entry.usd_to_lbp:
+            user.usd_balance -= entry.usd_amount
+        else:
+            user.usd_balance += entry.usd_amount
+
+        if entry.usd_to_lbp:
+            user.lbp_balance += entry.lbp_amount
+        else:
+            user.lbp_balance -= entry.lbp_amount
+        db.session.add(user)
+        db.session.commit()
     
 
     START_DATE=datetime.datetime.now() - datetime.timedelta(days=3)
@@ -81,6 +96,7 @@ def transaction():
     transactions_usd = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == True).all()
     transactions_lbp = Transaction.query.filter(Transaction.added_date.between(START_DATE, END_DATE),Transaction.usd_to_lbp == False).all()
 
+    
     usd_sell = []
     usd_buy = []
     num_sell = 0
@@ -136,7 +152,6 @@ def rate():
         transactions = Transaction.query.filter_by(user_id=decode_token(extract_auth_token(request)))
         return jsonify(transactions_schema.dump(transactions))
 
-    
 @app.route('/exchangeRate', methods=['GET'])
 def exchange():
     START_DATE=datetime.datetime.now() - datetime.timedelta(days=3)
@@ -206,7 +221,7 @@ def exchange():
     num_buy=num_buy, 
     num_sell=num_sell, 
     change_usd_lbp=change_usd_lbp,
-    change_lbp_usd=change_lbp_usd
+    change_lbp_usd=change_lbp_usd,
 )
 
 
@@ -218,23 +233,18 @@ def users():
     db.session.commit()
     return jsonify(user_schema.dump(entry))
 
-# @app.route('/user/<int:user_id>', methods=['PUT'])
-# def update_user_balance(user_id):
-#     from .model.user import User, user_schema
-    
-#     # Get the user object from the database
-#     user = User.query.filter(user_id)
-    
-#     # Update the USD balance and LBP balance
-#     user.usd_balance = request.json.get('usd_balance', user.usd_balance)
-#     user.lbp_balance = request.json.get('lbp_balance', user.lbp_balance)
-    
-#     # Commit the changes to the database
-#     db.session.commit()
-    
-#     # Return the updated user object as JSON
-#     return jsonify(user_schema.dump(user))
 
+@app.route('/balance', methods=['GET'])
+def get_balance():
+    if(extract_auth_token(request) is None):
+        return abort(403)
+    else:
+        from .model.user import User,user_schema
+        user = User.query.get(decode_token(extract_auth_token(request)))
+        usd_balance = user.usd_balance
+        lbp_balance = user.lbp_balance
+        print(user)
+        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance)
 
 @app.route('/authentication', methods=['POST'])
 def authentication():
