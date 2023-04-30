@@ -2,6 +2,7 @@ import datetime
 import itertools
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import and_, or_
 from .db_config import DB_CONFIG
 from flask import request
 from flask import jsonify
@@ -65,6 +66,7 @@ def transaction():
         entry = Transaction(usd_amount=request.json["usd_amount"],
                             lbp_amount=request.json["lbp_amount"],
                             usd_to_lbp=request.json["usd_to_lbp"],
+                            to_user_id=request.json["to_user_id"],
                             user_id=None)
         
     else:
@@ -72,20 +74,26 @@ def transaction():
         entry = Transaction(usd_amount=request.json["usd_amount"],
                             lbp_amount=request.json["lbp_amount"],
                             usd_to_lbp=request.json["usd_to_lbp"],
+                            to_user_id=request.json["to_user_id"],
                             user_id=decode_token(extract_auth_token(request)))
         from .model.user import User
         if entry.user_id:
             user = User.query.get(entry.user_id)
+            toUser = User.query.get(entry.to_user_id)
 
         if entry.usd_to_lbp:
             user.usd_balance -= entry.usd_amount
+            toUser.usd_balance += entry.usd_amount
         else:
             user.usd_balance += entry.usd_amount
+            toUser.usd_balance -= entry.usd_amount
 
         if entry.usd_to_lbp:
             user.lbp_balance += entry.lbp_amount
+            toUser.lbp_balance -= entry.lbp_amount
         else:
             user.lbp_balance -= entry.lbp_amount
+            toUser.lbp_balance += entry.lbp_amount
         db.session.add(user)
         db.session.commit()
     
@@ -149,7 +157,7 @@ def rate():
         return abort(403)
     else:
         from .model.transaction import Transaction,transactions_schema
-        transactions = Transaction.query.filter_by(user_id=decode_token(extract_auth_token(request)))
+        transactions = Transaction.query.filter(or_(Transaction.user_id == decode_token(extract_auth_token(request)), Transaction.to_user_id == decode_token(extract_auth_token(request))))
         return jsonify(transactions_schema.dump(transactions))
 
 @app.route('/exchangeRate', methods=['GET'])
@@ -243,9 +251,10 @@ def get_balance():
         user = User.query.get(decode_token(extract_auth_token(request)))
         usd_balance = user.usd_balance
         lbp_balance = user.lbp_balance
+        user_name = user.user_name
         print(user)
-        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance)
-
+        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance, user_name=user_name)
+    
 @app.route('/authentication', methods=['POST'])
 def authentication():
     entry = Auth(user_name = request.json['user_name'], password = request.json['password'])
