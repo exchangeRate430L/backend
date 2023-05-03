@@ -252,8 +252,9 @@ def get_balance():
         usd_balance = user.usd_balance
         lbp_balance = user.lbp_balance
         user_name = user.user_name
+        user_id = user.id
         print(user)
-        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance, user_name=user_name)
+        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance, user_name=user_name, user_id = user_id)
     
 @app.route('/authentication', methods=['POST'])
 def authentication():
