@@ -1,0 +1,559 @@
+openapi: 3.0.3
+info:
+  title: Exchange Rate API
+  description: An explanation for APIs and endpoints used in exchange rate website
+  version: 1.0.0
+servers:
+- url: https://127.0.0.1:5000
+tags:
+- name: transaction
+  description: Everything about transactions
+- name: user
+  description: Access to users
+- name: exchangeRate
+  description: Information about price and rates
+- name: balance
+  description: Access to user balance
+- name: alert
+  description: Email alerts of price flucuations
+paths:
+  /transaction:
+    get:
+      tags:
+      - transaction
+      summary: Get transactions by user ID
+      description: Returns a list of transactions for a user.
+      operationId: transaction_get
+      parameters:
+      - name: Authorization
+        in: header
+        description: Bearer token for authentication
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/inline_response_200'
+                x-content-type: application/json
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_403'
+      security:
+      - bearerAuth: []
+      x-openapi-router-controller: swagger_server.controllers.transaction_controller
+    post:
+      tags:
+      - transaction
+      summary: Create a new transaction
+      operationId: transaction_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/transaction_body'
+        required: true
+      responses:
+        "200":
+          description: A JSON object containing the details of the created transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+      x-openapi-router-controller: swagger_server.controllers.transaction_controller
+  /exchangeRate:
+    get:
+      tags:
+      - exchangeRate
+      summary: Get exchange rate data
+      description: "Returns the exchange rate data including the average exchange\
+        \ rate for USD to LBP and LBP to USD transactions, the number of buy and sell\
+        \ transactions for each currency, and the change in exchange rate since the\
+        \ last time the data was retrieved."
+      operationId: exchange_rate_get
+      responses:
+        "200":
+          description: Exchange rate data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+      x-openapi-router-controller: swagger_server.controllers.exchange_rate_controller
+  /user:
+    post:
+      tags:
+      - user
+      summary: Add a new user
+      operationId: user_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/user_body'
+        required: true
+      responses:
+        "200":
+          description: User added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          description: Invalid input data
+        "401":
+          description: Unauthorized access
+        "403":
+          description: Forbidden access
+      x-openapi-router-controller: swagger_server.controllers.user_controller
+  /alert:
+    get:
+      tags:
+      - alert
+      summary: Get user's alert status
+      operationId: alert_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_2'
+        "403":
+          description: Access forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_403_1'
+      security:
+      - bearerAuth: []
+      x-openapi-router-controller: swagger_server.controllers.alert_controller
+  /balance:
+    get:
+      tags:
+      - balance
+      summary: Get user's USD and LBP balance
+      operationId: balance_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_3'
+        "403":
+          description: Access forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_403_1'
+      security:
+      - bearerAuth: []
+      x-openapi-router-controller: swagger_server.controllers.balance_controller
+  /editAlert:
+    get:
+      tags:
+      - alert
+      summary: Edit user's alert preference
+      operationId: edit_alert_get
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "403":
+          description: Access forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_403_1'
+      security:
+      - bearerAuth: []
+      x-openapi-router-controller: swagger_server.controllers.alert_controller
+  /stopAlert:
+    get:
+      tags:
+      - user
+      summary: Stop user's alerts
+      operationId: stop_alert_get
+      responses:
+        "200":
+          description: User alert stopped successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "403":
+          description: Access forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_403_1'
+      security:
+      - bearerAuth: []
+      x-openapi-router-controller: swagger_server.controllers.user_controller
+  /authentication:
+    post:
+      tags:
+      - authentication
+      summary: Authenticate user and return JWT token
+      operationId: authentication_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/authentication_body'
+        required: true
+      responses:
+        "200":
+          description: Returns JWT token and user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_4'
+        "400":
+          description: Invalid request body
+        "403":
+          description: User not found or invalid credentials
+      x-openapi-router-controller: swagger_server.controllers.authentication_controller
+components:
+  schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The ID of the transaction
+        usd_amount:
+          type: number
+          description: The amount of USD transferred
+        lbp_amount:
+          type: number
+          description: The amount of LBP transferred
+        usd_to_lbp:
+          type: boolean
+          description: Whether the transfer was from USD to LBP (true) or LBP to USD
+            (false)
+        to_user_id:
+          type: integer
+          description: The ID of the user receiving the transfer
+        user_id:
+          type: integer
+          description: The ID of the user initiating the transfer (optional)
+        added_date:
+          type: string
+          description: The date and time when the transaction was created
+          format: date-time
+      example:
+        usd_to_lbp: true
+        lbp_amount: 1.46581298050294517310021547018550336360931396484375
+        user_id: 5
+        added_date: 2000-01-23T04:56:07.000+00:00
+        to_user_id: 5
+        id: 0
+        usd_amount: 6.02745618307040320615897144307382404804229736328125
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        user_name:
+          type: string
+          example: john_doe
+        role:
+          type: string
+          example: user
+          enum:
+          - admin
+          - user
+        usd_balance:
+          type: number
+          format: float
+          example: 500
+        lbp_balance:
+          type: number
+          format: float
+          example: 1500000
+        email:
+          type: string
+          example: john_doe@example.com
+        alert:
+          type: boolean
+          example: true
+      example:
+        role: user
+        usd_balance: 500
+        alert: true
+        user_name: john_doe
+        lbp_balance: 1500000
+        id: 1
+        email: john_doe@example.com
+    inline_response_200:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Transaction ID
+        usd_amount:
+          type: number
+          description: USD amount of the transaction
+        lbp_amount:
+          type: number
+          description: LBP amount of the transaction
+        usd_to_lbp:
+          type: boolean
+          description: Indicates whether the transaction is from USD to LBP or vice
+            versa
+        user_id:
+          type: integer
+          description: ID of the user who initiated the transaction
+        to_user_id:
+          type: integer
+          description: ID of the user who received the transaction
+        added_date:
+          type: string
+          description: Date and time the transaction was added
+          format: date-time
+      example:
+        usd_to_lbp: true
+        lbp_amount: 1.46581298050294517310021547018550336360931396484375
+        user_id: 5
+        added_date: 2000-01-23T04:56:07.000+00:00
+        to_user_id: 5
+        id: 0
+        usd_amount: 6.02745618307040320615897144307382404804229736328125
+    inline_response_403:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+    transaction_body:
+      required:
+      - lbp_amount
+      - to_user_id
+      - usd_amount
+      - usd_to_lbp
+      type: object
+      properties:
+        usd_amount:
+          type: number
+          description: The amount of USD to transfer
+        lbp_amount:
+          type: number
+          description: The amount of LBP to transfer
+        usd_to_lbp:
+          type: boolean
+          description: Whether the transfer is from USD to LBP (true) or LBP to USD
+            (false)
+        to_user_id:
+          type: integer
+          description: The ID of the user receiving the transfer
+    inline_response_200_1:
+      type: object
+      properties:
+        combined_data_hour:
+          type: array
+          description: Array of objects containing hourly exchange rate data
+          items:
+            $ref: '#/components/schemas/inline_response_200_1_combined_data_hour'
+        combined_data_day:
+          type: array
+          description: Array of objects containing daily exchange rate data
+          items:
+            $ref: '#/components/schemas/inline_response_200_1_combined_data_day'
+        usd_to_lbp:
+          type: number
+          description: Average USD to LBP exchange rate for all sell transactions
+            in the last 3 days
+        lbp_to_usd:
+          type: number
+          description: Average LBP to USD exchange rate for all buy transactions in
+            the last 3 days
+        num_buy:
+          type: integer
+          description: Number of buy transactions in the last 3 days
+        num_sell:
+          type: integer
+          description: Number of sell transactions in the last 3 days
+        change_usd_lbp:
+          type: number
+          description: Change in USD to LBP exchange rate since the last time the
+            data was retrieved
+        change_lbp_usd:
+          type: number
+          description: Change in LBP to USD exchange rate since the last time the
+            data was retrieved
+      example:
+        combined_data_hour:
+        - sell: 6.02745618307040320615897144307382404804229736328125
+          buy: 1.46581298050294517310021547018550336360931396484375
+          time: 0
+        - sell: 6.02745618307040320615897144307382404804229736328125
+          buy: 1.46581298050294517310021547018550336360931396484375
+          time: 0
+        usd_to_lbp: 2.3021358869347654518833223846741020679473876953125
+        num_sell: 3
+        change_lbp_usd: 4.1456080298839363962315474054776132106781005859375
+        change_usd_lbp: 2.027123023002321833274663731572218239307403564453125
+        lbp_to_usd: 7.061401241503109105224211816675961017608642578125
+        combined_data_day:
+        - date: date
+          sell: 5.962133916683182377482808078639209270477294921875
+          buy: 5.63737665663332876420099637471139430999755859375
+        - date: date
+          sell: 5.962133916683182377482808078639209270477294921875
+          buy: 5.63737665663332876420099637471139430999755859375
+        num_buy: 9
+    user_body:
+      type: object
+      properties:
+        user_name:
+          type: string
+          example: john_doe
+        password:
+          type: string
+          example: secret_password
+        role:
+          type: string
+          example: user
+          enum:
+          - admin
+          - user
+        usd_balance:
+          type: number
+          format: float
+          example: 500
+        lbp_balance:
+          type: number
+          format: float
+          example: 1500000
+        email:
+          type: string
+          example: john_doe@example.com
+        alert:
+          type: boolean
+          example: true
+    inline_response_200_2:
+      type: object
+      properties:
+        user_alert:
+          type: boolean
+          description: User's alert status
+      example:
+        user_alert: true
+    inline_response_403_1:
+      type: object
+      properties:
+        message:
+          type: string
+          example: You do not have permission to access this resource.
+    inline_response_200_3:
+      type: object
+      properties:
+        usd_balance:
+          type: number
+          description: User's USD balance
+        lbp_balance:
+          type: number
+          description: User's LBP balance
+        user_name:
+          type: string
+          description: User's username
+        user_id:
+          type: integer
+          description: User's ID
+        user_email:
+          type: string
+          description: User's email address
+      example:
+        user_email: user_email
+        usd_balance: 0.80082819046101150206595775671303272247314453125
+        user_id: 1
+        lbp_balance: 6.02745618307040320615897144307382404804229736328125
+        user_name: user_name
+    authentication_body:
+      type: object
+      properties:
+        user_name:
+          type: string
+        password:
+          type: string
+    inline_response_200_4:
+      type: object
+      properties:
+        token:
+          type: string
+        role:
+          type: string
+        usd_balance:
+          type: number
+        lbp_balance:
+          type: number
+        user_id:
+          type: integer
+      example:
+        role: role
+        usd_balance: 0.80082819046101150206595775671303272247314453125
+        user_id: 1
+        lbp_balance: 6.02745618307040320615897144307382404804229736328125
+        token: token
+    inline_response_200_1_combined_data_hour:
+      type: object
+      properties:
+        time:
+          type: integer
+          description: Timestamp in milliseconds
+        sell:
+          type: number
+          description: Average USD to LBP exchange rate for the hour
+        buy:
+          type: number
+          description: Average LBP to USD exchange rate for the hour
+      example:
+        sell: 6.02745618307040320615897144307382404804229736328125
+        buy: 1.46581298050294517310021547018550336360931396484375
+        time: 0
+    inline_response_200_1_combined_data_day:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date and time in YYYY-MM-DD HH:MM:SS format
+        sell:
+          type: number
+          description: Average USD to LBP exchange rate for the day
+        buy:
+          type: number
+          description: Average LBP to USD exchange rate for the day
+      example:
+        date: date
+        sell: 5.962133916683182377482808078639209270477294921875
+        buy: 5.63737665663332876420099637471139430999755859375
+  responses:
+    ForbiddenError:
+      description: Access forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/inline_response_403_1'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-bearerInfoFunc: swagger_server.controllers.authorization_controller.check_bearerAuth
+
