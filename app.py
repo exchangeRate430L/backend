@@ -242,6 +242,27 @@ def alert():
     else:
         return abort(403)
 
+@app.route('/editAlert', methods=['GET'])
+def editAlert():
+    from .model.user import User, user_schema
+    if (extract_auth_token(request) is not None):
+        user = User.query.get(decode_token(extract_auth_token(request)))
+        user.alert = 1
+    
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user_schema.dump(user))
+
+@app.route('/stopAlert', methods=['GET'])
+def stopAlert():
+    from .model.user import User, user_schema
+    if (extract_auth_token(request) is not None):
+        user = User.query.get(decode_token(extract_auth_token(request)))
+        user.alert = 0
+    
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user_schema.dump(user))
 
 @app.route('/user', methods=['POST'])
 def users():
