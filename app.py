@@ -16,8 +16,7 @@ app = Flask(__name__)
 
 bcrypt = Bcrypt(app)
 
-# app.config['SQLALCHEMY_DATABASE_URI'] = DB_CONFIG
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://be503f9900016f:d58d2a3e@us-cdbr-east-06.cleardb.net/heroku_00e13079dc221f8?reconnect=true'
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_CONFIG
 
 CORS(app)
 
