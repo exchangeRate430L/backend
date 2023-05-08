@@ -172,7 +172,8 @@ def exchange():
     second_last_row = Storage.query.filter(Storage.added_date.between(START_DATE, END_DATE)).order_by(Storage.id.desc()).offset(2).first()
     change_usd_lbp = last_row.avg_usd_lbp - second_last_row.avg_usd_lbp
     change_lbp_usd = last_row.avg_lbp_usd - second_last_row.avg_lbp_usd
-
+    
+    
     usd_sell = []
     usd_buy = []
     num_sell = 0
@@ -231,11 +232,21 @@ def exchange():
     change_lbp_usd=change_lbp_usd,
 )
 
+@app.route('/alert', methods=['GET'])
+def alert():
+    if(extract_auth_token(request)):
+        from .model.user import User,user_schema
+        user = User.query.get(decode_token(extract_auth_token(request)))
+        user_alert = user.alert
+        return jsonify(user_alert=user_alert)
+    else:
+        return abort(403)
+
 
 @app.route('/user', methods=['POST'])
 def users():
     from .model.user import User, user_schema
-    entry = User(user_name=request.json["user_name"], password=request.json["password"], role=request.json["role"], usd_balance=request.json['usd_balance'], lbp_balance=request.json['lbp_balance'], email=request.json['email'])
+    entry = User(user_name=request.json["user_name"], password=request.json["password"], role=request.json["role"], usd_balance=request.json['usd_balance'], lbp_balance=request.json['lbp_balance'], email=request.json['email'], alert=request.json['alert'])
     db.session.add(entry)
     db.session.commit()
     return jsonify(user_schema.dump(entry))
@@ -253,7 +264,6 @@ def get_balance():
         user_name = user.user_name
         user_id = user.id
         user_email = user.email
-        print(user)
         return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance, user_name=user_name, user_id = user_id, user_email=user_email)
     
 @app.route('/authentication', methods=['POST'])
@@ -276,8 +286,3 @@ def authentication():
                 lbp_balance = user.lbp_balance
                 user_id = user.id
                 return(jsonify({"token" : token, "role" : role, "usd_balance": usd_balance, "lbp_balance": lbp_balance, "user_id": user_id}))
-
-# for the backend
-
-#   do the newBuyUsdRate-butUsdRate = change
-#   do the newSellUsdRate-sellUsdRate = change
