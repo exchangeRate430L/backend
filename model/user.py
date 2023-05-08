@@ -7,15 +7,17 @@ class User(db.Model):
     role = db.Column(db.String(45))
     usd_balance = db.Column(db.Float, nullable=True)
     lbp_balance = db.Column(db.Float, nullable=True)
+    email = db.Column(db.String(128), nullable=True)
 
-    def __init__(self, user_name, password, role, usd_balance, lbp_balance):
+    def __init__(self, user_name, password, role, usd_balance, lbp_balance, email):
         super(User, self).__init__(user_name=user_name)
         self.hashed_password = bcrypt.generate_password_hash(password)
         self.role = role
         self.usd_balance = usd_balance
         self.lbp_balance = lbp_balance
+        self.email = email
 class UserSchema(ma.Schema):
     class Meta:
-        fields = ("id", "user_name", "hashed_password", "role", "usd_balance", "lbp_balance")
+        fields = ("id", "user_name", "hashed_password", "role", "usd_balance", "lbp_balance", "email")
         model = User
 user_schema = UserSchema()

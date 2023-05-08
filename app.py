@@ -236,7 +236,7 @@ def exchange():
 @app.route('/user', methods=['POST'])
 def users():
     from .model.user import User, user_schema
-    entry = User(user_name=request.json["user_name"], password=request.json["password"], role=request.json["role"], usd_balance=request.json['usd_balance'], lbp_balance=request.json['lbp_balance'])
+    entry = User(user_name=request.json["user_name"], password=request.json["password"], role=request.json["role"], usd_balance=request.json['usd_balance'], lbp_balance=request.json['lbp_balance'], email=request.json['email'])
     db.session.add(entry)
     db.session.commit()
     return jsonify(user_schema.dump(entry))
@@ -253,8 +253,9 @@ def get_balance():
         lbp_balance = user.lbp_balance
         user_name = user.user_name
         user_id = user.id
+        user_email = user.email
         print(user)
-        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance, user_name=user_name, user_id = user_id)
+        return jsonify(usd_balance=usd_balance, lbp_balance=lbp_balance, user_name=user_name, user_id = user_id, user_email=user_email)
     
 @app.route('/authentication', methods=['POST'])
 def authentication():
