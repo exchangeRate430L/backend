@@ -10,22 +10,9 @@ from flask_marshmallow import Marshmallow
 from flask_bcrypt import Bcrypt
 from flask import abort
 import jwt
-import yaml
-from flasgger import Swagger
 
 
 app = Flask(__name__)
-
-Swagger(app, template_file='swagger.yaml')
-
-@app.route('/swagger')
-def swagger():
-    with open('swagger.yaml', 'r') as f:
-        spec = yaml.load(f, Loader=yaml.FullLoader)
-    return Response(yaml.dump(spec), mimetype='text/yaml')
-
-if __name__ == '__main__':
-    app.run(debug=True)
 
 
 bcrypt = Bcrypt(app)
